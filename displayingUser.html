@@ -1,0 +1,152 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/public/pwa-setup.js"></script>
+
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col gap-6 p-4">
+
+    <!-- Heading -->
+    <h1 class="text-2xl font-bold text-center">Chats</h1>
+
+    <!-- Form Section -->
+    <form action="" enctype="multipart/form-data" class="w-full max-w-lg mx-auto flex items-center gap-2">
+        <input 
+            type="text" 
+            placeholder="Add Contacts..." 
+            name="phone" 
+            id="phone" 
+            class="flex-1 px-4 py-2 bg-gray-800 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-lg"
+        >
+        <button 
+            type="submit" 
+            class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition">
+            Add
+        </button>
+    </form>
+
+    <!-- Profile Picture -->
+    <div class="flex items-center justify-center">
+        <img 
+            src="" 
+            alt="Profile_Pic" 
+            class="w-24 h-24 rounded-full border-4 border-blue-500 shadow-lg"
+            id="profile_pic"
+        >
+
+        <img src="" alt="fav-series" width="100" height="100" id="fav-series">
+    </div>
+
+    <!-- Edit Profile Link -->
+    <div class="text-center">
+        <a href="editprofile" class="text-blue-400 hover:underline text-lg">Edit Profile</a>
+        <a href="favseries" class="text-blue-400 hover:underline text-lg">Fav Series</a>
+
+    </div>
+
+    <!-- Friends List Section -->
+    <div id="friends-list" class="mt-6 space-y-4">
+        <!-- Friends will be dynamically added here -->
+    </div>
+
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+
+    <script>
+        const sender = localStorage.getItem("username");
+
+        let form = document.querySelector("form");
+        let input = document.getElementById("phone");
+
+        form.addEventListener("submit", (e) => {
+            let formData = new FormData(form);
+            formData.append("sender", sender);
+
+            fetch("/add-contacts", {
+                method: 'POST',
+                body: formData
+            });
+        });
+
+        fetch(`/get-users?username=${sender}`).then((response) => {
+            return response.json();
+        }).then((users) => {
+            users.users.forEach((user) => {
+                // Create a container for each user
+                const userContainer = document.createElement("a");
+                userContainer.classList.add(
+                    "users", 
+                    "block", 
+                    "w-full", 
+                    "bg-gray-800", 
+                    "text-white", 
+                    "p-4", 
+                    "rounded-lg", 
+                    "mb-4", 
+                    "shadow-lg", 
+                    "hover:bg-gray-700", 
+                    "transition", 
+                    "flex", 
+                    "items-center", 
+                    "gap-4"
+                );
+                userContainer.href = `chatArea/${sender}/${user.username}`;
+
+                // Create profile picture element
+                const profilePic = document.createElement("img");
+                profilePic.src = `/uploads/${user.profilepic}`;
+                profilePic.alt = `${user.username}'s Profile Picture`;
+                profilePic.classList.add("w-12", "h-12", "rounded-full", "border-2", "border-gray-600", "object-cover");
+
+                // Create username text element
+                const usernameText = document.createElement("span");
+                usernameText.textContent = user.username;
+                usernameText.classList.add("font-medium", "text-lg", "truncate");
+
+                // Create bio text element (if any)
+                const bioText = document.createElement("p");
+                bioText.textContent = user.bio || "No bio available.";
+                bioText.classList.add("text-sm", "text-gray-400", "mt-1");
+
+                // Create Spotify link (if any)
+                if (user.spotify) {
+                    const spotifyLink = document.createElement("a");
+                    spotifyLink.href = user.spotify;
+                    spotifyLink.target = "_blank";
+                    spotifyLink.classList.add("text-blue-400", "hover:underline", "text-sm", "mt-1");
+                    spotifyLink.textContent = "Spotify Playlist";
+                    userContainer.appendChild(spotifyLink);
+                }
+
+                // Append elements to the user container
+                userContainer.appendChild(profilePic);
+                userContainer.appendChild(usernameText);
+                userContainer.appendChild(bioText);
+
+                // Add the user container to the body
+                document.getElementById("friends-list").appendChild(userContainer);
+            });
+        });
+
+        let img = document.getElementById("profile_pic");
+        let favseries = document.getElementById("fav-series")
+        fetch(`/get-user-profile-pic/${sender}`).then((response) => {
+            return response.json();
+        }).then((data) => {
+            img.src = data.profilepic;
+            favseries.src= data.favseries
+        });
+    </script>
+</body>
+</html>

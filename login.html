@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="/public/pwa-setup.js"></script>
+
+</head>
+<body>
+    <form action="" enctype="multipart/form-data">
+        <input type="text" name="phoneno" id="" placeholder="Enter phone no....">
+<button type="submit">Submit</button>
+    </form>
+    <p></p>
+<script>
+
+    let p = document.querySelector("p")
+    let form = document.querySelector("form");
+    form.addEventListener("submit" , (e)=>{
+        e.preventDefault();
+        let formData = new FormData(form)
+
+fetch("/login", {
+    method:'POST' , 
+    body:formData
+}).then((response)=>{
+    return (response.json())
+    }).then((data)=>{
+        if(data.url){
+            localStorage.setItem("username" , data.username)
+            window.location.href=data.url
+        }else{
+     p.innerText=data.error
+     console.log(data.error)
+        }
+    })
+
+    })
+</script>
+
+</body>
+</html>

@@ -1,0 +1,128 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- PWA setup -->
+    <script src="/public/pwa-setup.js"></script>
+    
+</head>
+<body class="bg-gray-900 text-gray-100 h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-purple-900 text-gold flex items-center px-4 py-3 shadow-md">
+        <img src="https://via.placeholder.com/40" alt="User" class="rounded-full w-10 h-10 border-2 border-gold">
+        <div class="ml-4">
+            <h1 class="text-lg font-semibold text-gold">Chat with Friend</h1>
+            <p class="text-sm text-gray-300" id="status"></p>
+        </div>
+    </header>
+
+    <!-- Chat Area -->
+    <div id="chatArea" class="flex-1 bg-gray-800 px-4 py-4 overflow-y-auto space-y-3">
+        <!-- Messages will dynamically appear here -->
+    </div>
+
+    <!-- Message Input -->
+    <form id="messageForm" class="bg-gray-850 flex items-center px-4 py-3 border-t border-gray-700">
+        <input type="text" id="message" name="message" placeholder="Type a message..." 
+            class="flex-1 px-4 py-2 border border-gray-700 rounded-full shadow-sm text-gray-100 bg-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-700 focus:border-purple-700 placeholder-gray-500">
+        <button type="submit" class="ml-3 bg-purple-700 text-gold px-4 py-2 rounded-full hover:bg-purple-800 transition duration-300">
+            Send
+        </button>
+    </form>
+
+    <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
+    <script>
+        const socket = io(); // Make sure the URL matches your backend
+        const form = document.getElementById("messageForm");
+        const messageInput = document.getElementById("message");
+        const chatArea = document.getElementById("chatArea");
+
+        let socketid;
+        let sender = localStorage.getItem("username");
+        let urlPath = window.location.pathname;
+        let urlParts = urlPath.split('/');
+        let receiver = urlParts[urlParts.length - 1];
+        let status = document.getElementById("status");
+
+        // Socket connection
+        socket.on('connect', () => {
+            socketid = socket.id;
+
+            // Initial request to backend
+            let formData = new FormData();
+            formData.append("sender", sender);
+            formData.append("receiver", receiver);
+            formData.append("socketid", socketid);
+
+            fetch(`/chatArea/${sender}/${receiver}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then((user) => {
+                if (user.online) {
+                    status.innerHTML = 'Online';
+                }
+            })
+            .catch(error => console.log("Error:", error));
+        });
+
+        // Send message on form submission
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+            if (message === "") return;
+
+            appendMessage(message, "my-message");
+
+            let messageData = new FormData(form);
+            fetch(`/api/${sender}/${receiver}`, {
+                method: 'POST',
+                body: messageData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (!data.online) {
+                        status.innerHTML = 'Offline';
+                    } else {
+                        status.innerHTML = 'Online';
+                    }
+
+                    socket.emit('msg', {
+                        sender: sender,
+                        receiver: receiver,
+                        message: message
+                    });
+
+                    messageInput.value = "";
+                } else {
+                    console.error("Error from server:", data.message);
+                }
+            })
+            .catch(error => console.error("Error during fetch:", error));
+        });
+
+        function appendMessage(text, type) {
+            const messageDiv = document.createElement("div");
+            messageDiv.textContent = text;
+            messageDiv.className = `max-w-[20%] px-4 py-2 rounded-lg shadow-md ${
+                type === "my-message"
+                    ? "bg-purple-700 text-gold self-end ml-auto text-right"
+                    : "bg-gray-700 text-gray-100 self-start mr-auto text-left"
+            }`;
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        socket.on('pm', (msg) => {
+            appendMessage(msg.text, "friend-message");
+        });
+    </script>
+</body>
+</html>
